@@ -1,0 +1,59 @@
+name: Upload Sentry SourceMaps
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-and-upload:
+    name: Build & Upload SourceMaps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+        run: npm run build
+
+      - name: Install sentry-cli
+        run: |
+          npm install -g @sentry/cli
+
+      - name: Create Sentry release
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          VERSION=$(git rev-parse --short HEAD)
+          sentry-cli releases new $VERSION
+          sentry-cli releases set-commits --auto $VERSION || true
+
+      - name: Upload source maps
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          VERSION=$(git rev-parse --short HEAD)
+          # point to the built assets directory
+          sentry-cli releases files $VERSION upload-sourcemaps dist --url-prefix '~/'
+
+      - name: Finalize release
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          VERSION=$(git rev-parse --short HEAD)
+          sentry-cli releases finalize $VERSION

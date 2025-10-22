@@ -7,18 +7,21 @@
 import { defineComponent, ref, computed, onMounted, PropType } from 'vue';
 import { User } from 'firebase/auth';
 import { signOutUser, getUserProfile, UserProfile as UserProfileType } from '../firebase';
+import type { UserProfileProps } from '../types/components';
 
-export const UserProfile = defineComponent({
+export const UserProfile = defineComponent<UserProfileProps>({
   name: 'UserProfile',
   props: {
     user: {
       type: Object as PropType<User | null>,
-      required: true,
+      required: true
     },
     show: {
       type: Boolean,
-      required: true,
+      required: true
     },
+    class: String,
+    style: [String, Object]
   },
   emits: ['close', 'signedOut'],
   setup(props, { emit }) {

@@ -45,6 +45,13 @@ jspm_packages/
 *.sln
 *.sw?
 
+# Sentry source maps
+.*/dist/**/*.map
+.sentryclirc
+sentry.properties
+sentry.ts
+
+
 
 #Ignore vscode AI rules
 .github\instructions\codacy.instructions.md

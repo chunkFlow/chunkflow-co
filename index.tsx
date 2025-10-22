@@ -1,5 +1,4 @@
-/** * @license * SPDX-License-Identifier: Apache-2.0 */
-// fix: Use the recommended model for real-time audio conversation per coding guidelines.
+
 const DEFAULT_DIALOG_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
 const DEFAULT_IMAGE_MODEL = 'imagen-4.0-fast-generate-001';
 const DEFAULT_INTERRUPT_SENSITIVITY = StartSensitivity.START_SENSITIVITY_HIGH;
@@ -37,7 +36,7 @@ import './src/styles/tailwind.css';
 
 import { createApp, ref, defineComponent, onMounted, onUnmounted, computed, watch, nextTick, reactive } from 'vue';
 import { EndSensitivity, GoogleGenAI, LiveServerMessage, Modality, Session, StartSensitivity, Type } from '@google/genai';
-import { AuthModal, UserProfile, SentryTestPage } from './src/components';
+import { registerComponents } from './src/plugins/components';
 import { useAuth } from './src/composables/useAuth';
 import { validateEnvironment, getGeminiApiKey } from './src/config/env-validation';
 
@@ -1132,11 +1131,11 @@ const ImagineComponent = defineComponent({
     const loadView = async (view: 'avatars' | 'audiobook') => {
       if (view === 'avatars' && !AvatarsView.value) {
         const mod = await import('./src/views/AvatarsView');
-        AvatarsView.value = mod.default || mod.AvatarsView || mod;
+        AvatarsView.value = mod.default;
       }
       if (view === 'audiobook' && !AudiobookView.value) {
         const mod = await import('./src/views/AudiobookView');
-        AudiobookView.value = mod.default || mod.AudiobookView || mod;
+        AudiobookView.value = mod.default;
       }
     };
     const noAudioCount = ref<number>(0); // Add counter for no-audio events
@@ -2198,14 +2197,20 @@ const app = createApp(ImagineComponent);
 // Initialize Sentry (safe no-op when DSN not provided)
 try {
   // lazy import local helper to avoid large bundle impact
-  // eslint-disable-next-line import/no-unresolved, @typescript-eslint/no-var-requires
-  const { initSentry } = require('./src/sentry');
-  try {
-    initSentry(app);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('Sentry helper threw:', e?.message || e);
-  }
+  import('./src/sentry').then(({ initSentry }) => {
+    try {
+      // call but do not block mounting if Sentry slow
+      void initSentry(app).catch((e: any) => {
+        // eslint-disable-next-line no-console
+        console.warn('Sentry init failed:', e?.message || e);
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Sentry helper threw:', e?.message || e);
+    }
+  }).catch((err) => {
+    // ignore failure to load helper in constrained environments
+  });
 } catch (e) {
   // ignore on platforms that can't require()
 }
